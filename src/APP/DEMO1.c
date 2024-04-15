@@ -4,6 +4,7 @@
 #include "STK.h"
 #include "LCD.h"
 #include "Switch.h"
+#include"Uart.h"
 
 #define VIEW_1 1
 #define VIEW_2 2
@@ -14,7 +15,8 @@
 #define VIEW_4 7
 #define UP 1
 #define DOWN 2
-#define IDLE 10
+//#define IDLE 10
+#define NOT_PRESSED 6
 
 u32 current_pressedswitch = _SWITCH_NUM;
 u8 Default_View = 0;
@@ -24,7 +26,7 @@ u8 Edit_View = 0;
 u8 EditMode;
 u8 CursorPosition = 0;
 u8 SendBuffer[1];
-u8 RecieveBuffer[1];
+u8 ReceiveBuffer[1] = {NOT_PRESSED};
 
 static void Display_Date_time(void);
 static void Display_View2(void);
@@ -108,11 +110,11 @@ char Current_date[10] = "17-4-2024";
 /********************Runnables**********************************************************/
 void Runnable_views(void)
 {
-    //Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
+    Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
     static u8 RecievedSwitch;
     static u8 VIEWS = VIEW_1;
     
-    RecievedSwitch = RecieveBuffer[0];
+    RecievedSwitch = ReceiveBuffer[0];
 
 
     switch (VIEWS)
@@ -123,7 +125,7 @@ void Runnable_views(void)
 
         if (RecievedSwitch == Switch_mode)
         {
-            RecievedSwitch = IDLE;
+            ReceiveBuffer[0] = NOT_PRESSED;
             Default_View++;
             LCD_ClearScreen_Asynch();
             VIEWS = VIEW_2;
@@ -139,12 +141,14 @@ void Runnable_views(void)
         }
         if (Default_View == 2 && RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 0;
             VIEWS = VIEW_1;
         }
         else if (Default_View == 2 && RecievedSwitch == Switch_up)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 0;
             Choose_View++;
@@ -152,6 +156,7 @@ void Runnable_views(void)
         }
         else if (Default_View == 2 && RecievedSwitch == Switch_down)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 0;
             Choose_View++;
@@ -167,21 +172,23 @@ void Runnable_views(void)
         {
             Display_View3();
         }
-        if ( current_pressedswitch == Switch_up)
+        if ( RecievedSwitch == Switch_up)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3_1;
             
         }
 
-        if ( current_pressedswitch == Switch_down)
+        if ( RecievedSwitch == Switch_down)
         {
-
+            ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3_2;
            
         }
 
-        if (current_pressedswitch == Switch_mode)
+        if (RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 1;
             Choose_View = 0;
@@ -194,13 +201,14 @@ void Runnable_views(void)
         Display_View3_1();
         StopWatchMs();
       
-        if (current_pressedswitch == Switch_down)
+        if (RecievedSwitch == Switch_down)
         {
-           
+           ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3_2;
         }
-        if (current_pressedswitch == Switch_mode)
+        if (RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 1;
             VIEWS = VIEW_2;
@@ -211,19 +219,21 @@ void Runnable_views(void)
 
         // Choose_View = 0;
         Display_View3_2();
-        if (current_pressedswitch == Switch_up)
+        if (RecievedSwitch == Switch_up)
         {
             // Choose_View++;
-           
+           ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3_1;
         }
-        if ( current_pressedswitch == Switch_down)
+        if ( RecievedSwitch == Switch_down)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3_3;
            // Choose_View = 0;
         }
-        if (current_pressedswitch == Switch_mode)
+        if (RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 1;
             VIEWS = VIEW_2;
@@ -232,12 +242,14 @@ void Runnable_views(void)
     case VIEW_3_3: // Reset Stopwatch
         //Choose_View = 0;
         Display_View3_3();
-        if (current_pressedswitch == Switch_up)
+        if (RecievedSwitch == Switch_up)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             VIEWS = VIEW_3;
         }
-        if (current_pressedswitch == Switch_mode)
+        if (RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 1;
             //Choose_View = 0;
@@ -251,38 +263,45 @@ void Runnable_views(void)
             Display_Edit_Time();
             Edit_Date_Time();
         //}
-        if (current_pressedswitch == Switch_up)
+        if (RecievedSwitch == Switch_up)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             EditMode = UP;
         }
-        else if (current_pressedswitch == Switch_down)
+        else if (RecievedSwitch == Switch_down)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             EditMode = DOWN;
         }
-        else if (current_pressedswitch == Switch_left)
+        else if (RecievedSwitch == Switch_left)
         {
             if (CursorPosition == 0)
             {
+                ReceiveBuffer[0] = NOT_PRESSED;
                 CursorPosition = 13;
             }
             else
             {
+                ReceiveBuffer[0] = NOT_PRESSED;
                 CursorPosition--;
             }
         }
-        else if (current_pressedswitch == Switch_right)
+        else if (RecievedSwitch == Switch_right)
         {
             if (CursorPosition == 13)
             {
+                ReceiveBuffer[0] = NOT_PRESSED;
                 CursorPosition = 0;
             }
             else
             {
+                ReceiveBuffer[0] = NOT_PRESSED;
                 CursorPosition++;
             }
         }
-        else if (current_pressedswitch == Switch_mode)
+        else if (RecievedSwitch == Switch_mode)
         {
+            ReceiveBuffer[0] = NOT_PRESSED;
             LCD_ClearScreen_Asynch();
             Default_View = 1;
             Choose_View = 0;
@@ -421,8 +440,8 @@ void Display_View2(void)
     else if (timecounter == 15)
     {
         LCD_WriteString_Asynch("Edit Time&Date  ", 16);
-        timecounter = 0;
         Default_View++;
+        timecounter = 0;
     }
 }
 
@@ -441,7 +460,7 @@ void switch_Task(void)
             current_pressedswitch = counter;
             counter = _SWITCH_NUM;
             SendBuffer[0] = current_pressedswitch;
-            //Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
+            Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
         }
     }
 }
@@ -1015,9 +1034,34 @@ else if (editcounter == 12){
 
 int main(int argc, char *argv[])
 {
-    // Enable GPIOB peripheral clock
+
+    NVIC_EnableIRQ(IRQ_USART1);
+    
     RCC_enuEnablePreipheral(AHB1_BUS, GPIOB_RCC);
     RCC_enuEnablePreipheral(AHB1_BUS, GPIOA_RCC);
+    RCC_enuEnablePreipheral(APB2_BUS, USART1_RCC);
+
+  GPIOPIN_t uarttx;
+  GPIOPIN_t uartrx;
+  uartrx.gpioPORT =  GPIO_PORTB;
+  uartrx.gpioPIN = GPIO_PIN7;
+  uartrx.gpioMODE = GPIO_AF_PP;
+  uartrx.GPIO_AF = GPIO_AF_USART1_2;
+  uartrx.gpioSPEED=GPIO_HIGHSPEED;
+
+  uarttx.gpioPORT =  GPIO_PORTB;
+  uarttx.gpioPIN = GPIO_PIN6;
+  uarttx.gpioMODE = GPIO_AF_PP;
+  uarttx.GPIO_AF = GPIO_AF_USART1_2;
+  uarttx.gpioSPEED=GPIO_HIGHSPEED;
+
+  GPIO_InitPin(&uartrx);
+  GPIO_InitPin(&uarttx);
+
+ // Uart_TxBufferAsync(myData, 7, UART_1);
+
+    // Enable GPIOB peripheral clock
+
 
     // Initialize LCD asynchronously
     LCD_Init_Asynch();

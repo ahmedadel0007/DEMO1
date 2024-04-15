@@ -1,196 +1,104 @@
-/*
- ============================================================================
- Name        : NVIC.c
- Author      : Ahmed Adel
- Description : Header File for the NVIC Driver
- Date        : 5/3/2024
- ============================================================================
- */
-
 #include "NVIC.h"
 
-NVIC_ERRORSTATE_t  NVIC_EnableInterrupt (u8 Copy_InterrputID){
+#define NVIC_ISER_BASE_ADDRESS 		0xE000E100
+#define NVIC_ISER ((volatile uint32_t* const)NVIC_ISER_BASE_ADDRESS)
 
-	NVIC_ERRORSTATE_t local_errorstate = NVIC_OK ;
+#define NVIC_ICER_BASE_ADDRESS 		0xE000E180
+#define NVIC_ICER ((volatile uint32_t* const )NVIC_ICER_BASE_ADDRESS)
 
-	u8 local_Register;
-	u8 local_Bit;
+#define NVIC_ISPR_BASE_ADDRESS 		0xE000E200
+#define NVIC_ISPR ((volatile uint32_t* const)NVIC_ISPR_BASE_ADDRESS)
 
-	if (Copy_InterrputID > NVIC_TotalInterrputs){
-		local_errorstate= NVIC_INVAILD_INT_NUMBER;
+#define NVIC_IABR_BASE_ADDRESS 		0xE000E300
+#define NVIC_IABR ((volatile uint32_t* const) NVIC_IABR_BASE_ADDRESS)
 
-	}
-	else {
-		local_Register= Copy_InterrputID / 32 ;
+#define NVIC_IPR_BASE_ADDRESS 		0xE000E400
+#define NVIC_IPR ((volatile uint32_t* const) NVIC_IPR_BASE_ADDRESS)
 
-		local_Bit=Copy_InterrputID % 32 ;
+#define CBR_AIRCR_BASE_ADDRESS		 0xE000ED0C
+#define CBR_AIRCR *((volatile uint32_t* const) CBR_AIRCR_BASE_ADDRESS)
 
-		NVIC_ISER_BASE[local_Register] |= (1<<local_Bit) ;
+#define PRI_GROUP_MASK 				0xFFFF0700
+#define PRI_OFFSET 			4
 
-		local_errorstate = NVIC_OK ;
+#define PRI_WRITE_MASK      0x05FA0000
 
-	}
-	return local_errorstate;
-
-}
-//===============================================================================================================//
-
-NVIC_ERRORSTATE_t NVIC_DisableInterrput (u8 Copy_InterrputID){
-	NVIC_ERRORSTATE_t local_errorstate = NVIC_OK ;
-
-	u8 local_Register;
-	u8 local_Bit;
-
-	if (Copy_InterrputID > NVIC_TotalInterrputs){
-		local_errorstate= NVIC_INVAILD_INT_NUMBER;
-
-	}
-	else {
-		local_Register= Copy_InterrputID / 32 ;
-
-		local_Bit=Copy_InterrputID % 32 ;
-
-		NVIC_ICER_BASE[local_Register] |= (1<<local_Bit) ;
-
-		local_errorstate = NVIC_OK ;
-
-	}
-	return local_errorstate;
-
-}
-//==============================================================================================//
-
-NVIC_ERRORSTATE_t  NVIC_SetPending (u8 Copy_InterrputID){
-
-	NVIC_ERRORSTATE_t local_errorstate =NVIC_OK;
-
-	u8 local_Register ;
-	u8 local_Bit ;
-
-	if (Copy_InterrputID > NVIC_TotalInterrputs){
-		local_errorstate = NVIC_INVAILD_INT_NUMBER;
-
-	}
-
-	else{
-		local_Register = Copy_InterrputID / 32;
-
-		local_Bit = Copy_InterrputID % 32;
-
-		NVIC_ISPR_BASE[local_Register] |= (1<<local_Bit);
-	}
-
-	return local_errorstate ;
-
-}
-
-//===========================================================================================================//
-
-NVIC_ERRORSTATE_t  NVIC_ClearPending (u8 Copy_InterrputID){
-
-
-	NVIC_ERRORSTATE_t local_errorstate =NVIC_OK;
-
-	u8 local_Register ;
-	u8 local_Bit ;
-
-	if (Copy_InterrputID > NVIC_TotalInterrputs){
-		local_errorstate = NVIC_INVAILD_INT_NUMBER;
-
-	}
-
-	else{
-		local_Register = Copy_InterrputID / 32;
-
-		local_Bit = Copy_InterrputID % 32;
-
-		NVIC_ICPR_BASE[local_Register] |= (1<<local_Bit);
-	}
-
-	return local_errorstate ;
-
-}
-//==========================================================================================================//
-
-
-NVIC_ERRORSTATE_t  NVIC_GetActiveState (u8 Copy_InterrputID, u8* Active_value){
-
-	NVIC_ERRORSTATE_t local_errorstate =NVIC_OK;
-
-	u8 local_Register ;
-	u8 local_Bit ;
-
-	if (Copy_InterrputID > NVIC_TotalInterrputs){
-		local_errorstate = NVIC_INVAILD_INT_NUMBER;
-
-	}
-	else {
-		local_Register = Copy_InterrputID / 32 ;
-
-		local_Bit =Copy_InterrputID % 32 ;
-
-		* Active_value=((*(NVIC_IAB_BASE+local_Register))>>local_Bit)  &  1  ;
-	}
-
-	return local_errorstate;
-}
-
-//============================================================================================================//
-
-
-NVIC_ERRORSTATE_t NVIC_SetPriority (u8 Copy_InterrputID , u8 Copy_priority){
-
-	NVIC_ERRORSTATE_t local_errorstate =NVIC_OK;
-
-	u8 local_Register ;
-	u8 local_Bit ;
-
-	if (Copy_InterrputID > NVIC_TotalInterrputs)
+ErrorStatus_t NVIC_EnableIRQ(IRQ_t IRQn)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	if (IRQn>IRQ_SPI4)
 	{
-		local_errorstate = NVIC_INVAILD_INT_NUMBER;
-
+		RetErrorStatus=ParameterError;
 	}
-	else if (Copy_priority > NVIC_SPI4_INTERRUPT)
-	{
-		local_errorstate =NVIC_INVAILD_Priority;
-	}
-
 	else
 	{
-		local_Register = Copy_InterrputID / 4;
-
-		local_Bit = ((Copy_InterrputID % 4)*8)+4;
-
-		NVIC_IPR_BASE[local_Register] |= Copy_priority << (local_Bit<<4);
-
-		local_errorstate =NVIC_OK;
+		RetErrorStatus=OK;
+		NVIC_ISER[IRQn/32] = 1<<(IRQn%32);
 	}
 
-	return local_errorstate ;
-
-}
-//=============================================================================================================================================//
-
-/* choose a Sub Group from The following Choice :
-1- NVIC_PRIORITYGROUP_16_NONE    (0x0UL << 8)  // None bits group, 16 bits sub priority
-2- NVIC_PRIORITYGROUP_8_2        (0x4UL << 8)  // 8 bits group, 2 bits sub priority
-3- NVIC_PRIORITYGROUP_4_4        (0x5UL << 8)  // 4 bits group, 4 bits sub priority
-4- NVIC_PRIORITYGROUP_2_8        (0x6UL << 8)  // 2 bits group, 8 bits sub priority
-5- NVIC_PRIORITYGROUP_NONE_16    (0x7UL << 8)  // None bits group, 16 bits sub priority*/
-//============================================================================================================================================//
-NVIC_ERRORSTATE_t NVIC_SetSubPriority (u8 Group_Number ){
-
-	NVIC_ERRORSTATE_t local_errorstate = NVIC_INVAILD_GROUP_NUMBER ;
-
-	u32 Loc_Aircr = SCB_AIRCR ;
-	Loc_Aircr &= AIRCR_Clear ;
-	Loc_Aircr|=Group_Number;
-	SCB_AIRCR = Loc_Aircr;
-
-	return local_errorstate ;
+	return RetErrorStatus;
 }
 
-//=======================================================================================================================//
+ErrorStatus_t NVIC_DisableIRQ(IRQ_t IRQn)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	if (IRQn>IRQ_SPI4)
+	{
+		RetErrorStatus=ParameterError;
+	}
+	else
+	{
+		RetErrorStatus=OK;
+		NVIC_ICER [IRQn/32] = 1<<(IRQn%32);
+	}
+	return RetErrorStatus;
+}
 
+ErrorStatus_t NVIC_SetPendingIRQ(IRQ_t IRQn)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	if (IRQn>IRQ_SPI4)
+		{
+			RetErrorStatus=ParameterError;
+		}
+		else
+		{
+			RetErrorStatus=OK;
+			NVIC_ISPR[IRQn/32] = 1<<(IRQn%32);
+		}
 
+	return RetErrorStatus;
+}
 
+ErrorStatus_t NVIC_GetActive(IRQ_t IRQn,uint8_t* add_retvalue)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	*add_retvalue = NVIC_IABR[IRQn/32] & 1<<(IRQn%32);
+	return RetErrorStatus;
+}
+
+ErrorStatus_t NVIC_GetPendingIRQ (IRQ_t IRQn, uint8_t* add_retvalue )
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	*add_retvalue = NVIC_ISPR[IRQn/32] & 1<<(IRQn%32);
+	return RetErrorStatus;
+}
+ErrorStatus_t NVIC_SetPriorityGrouping (uint32_t group)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	uint32_t loc_register = CBR_AIRCR;
+	loc_register &= ~(PRI_GROUP_MASK);
+	loc_register |= group;
+	CBR_AIRCR=loc_register;
+	return RetErrorStatus;
+}
+
+ErrorStatus_t NVIC_SetPriority(IRQ_t IRQn, uint16_t priority)
+{
+	ErrorStatus_t RetErrorStatus=NOK;
+	uint32_t loc_register=NVIC_IPR[IRQn/4];
+	loc_register &= ~(0xF<<(8*(IRQn%4))<<PRI_OFFSET);
+	loc_register|= priority<<(8*(IRQn%4)+4);
+	NVIC_IPR[IRQn/4]=loc_register;
+	return RetErrorStatus;
+}
